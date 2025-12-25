@@ -1,0 +1,53 @@
+name: peck
+help: Screenshot and screen recorder tool for Wayland.
+version: 0.1.0
+
+environment_variables:
+  - name: peck_screenshot_dir
+    default: $HOME/Pictures
+    help:
+      The directory to store screenshots to when
+      no filepath is provided.
+      Will create this if it does not exist.
+      Overridden by [--temp | -t]
+  - name: peck_recording_dir
+    default: $HOME/Recordings
+    help:
+      The directory to store recordings to when
+      no filepath is provided.
+      Will create this if it does not exist.
+      Overridden by [--temp | -t]
+  - name: peck_screenshot_format
+    default: png
+    help:
+      Output to convert the screenshot to.
+      Accepts png|ppm|jpeg.
+  - name: peck_recording_format
+    default: mp4
+    help:
+      Output to convert the recording to.
+      Will always record to mp4 first, and then
+      use ffmpeg to convert to the desired format.
+
+args:
+  - name: filepath
+    help: Filepath to save to
+
+flags:
+  - long: --clipboard
+    short: -c
+    help: Copy the output file to the clipboard.
+  - long: --record
+    short: -r
+    help: Record rather than screenshot.
+  - long: --temp
+    short: -t
+    help: Store the file in /tmp/.
+  - long: --format
+    short: -f
+    arg: file_format
+    help:
+      Override the output format set by
+      \$PECK_SCREENSHOT_FORMAT
+      or \$PECK_RECORDING_FORMAT.
+      Accepts png|ppm|jpeg
