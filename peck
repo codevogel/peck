@@ -123,16 +123,16 @@ root_command() {
     fi
 
     echo "Recording screen. Press Ctrl+C to stop..." >&2
-    wf-recorder -g "$region" -f "$tmp_mp4"
+    wf-recorder -g "$region" -f "$tmp_mp4" &>/dev/null
 
     # Convert to desired output format if different from mp4
     if [[ "$out_format" != "mp4" ]]; then
       final_file="$tmp_dir/$filename.$out_format"
 
       if [[ "$out_format" == "gif" ]]; then
-        ffmpeg -y -i "$tmp_mp4" -vf "fps=15,scale=iw:-1:flags=lanczos" "$final_file"
+        ffmpeg -y -i "$tmp_mp4" -vf "fps=15,scale=iw:-1:flags=lanczos" "$final_file" &>/dev/null
       else
-        ffmpeg -y -i "$tmp_mp4" "$final_file"
+        ffmpeg -y -i "$tmp_mp4" "$final_file" &>/dev/null
       fi
 
       rm -f "$tmp_mp4"
