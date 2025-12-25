@@ -96,3 +96,51 @@ if [[ "$mode" == "screenshot" ]]; then
     echo "Screenshot was copied to the clipboard." >&2
   fi
 fi
+
+# --- Screen Recording ----------------------------------------
+
+if [[ "$mode" == "record" ]]; then
+  tmp_mp4="$tmp_dir/$filename.mp4"
+  out_file="$tmp_mp4"
+
+  # Ask slurp for a region if needed
+  region="$(slurp 2>/dev/null)"
+  if [[ -z "$region" ]]; then
+    echo "No region selected. Exiting." >&2
+    exit 1
+  fi
+
+  echo "Recording screen. Press Ctrl+C to stop..." >&2
+  wf-recorder -g "$region" -f "$tmp_mp4"
+
+  # Convert to desired output format if different from mp4
+  if [[ "$out_format" != "mp4" ]]; then
+    final_file="$tmp_dir/$filename.$out_format"
+
+    if [[ "$out_format" == "gif" ]]; then
+      ffmpeg -y -i "$tmp_mp4" -vf "fps=15,scale=iw:-1:flags=lanczos" "$final_file"
+    else
+      ffmpeg -y -i "$tmp_mp4" "$final_file"
+    fi
+
+    rm -f "$tmp_mp4"
+    out_file="$final_file"
+  fi
+
+  if [[ "$mode_save" == "permanent" ]]; then
+    mkdir -p "$out_dir"
+    final_out="$out_dir/$filename.$out_format"
+    mv "$out_file" "$final_out"
+    out_file="$final_out"
+  fi
+
+  echo "Recording saved at '$out_file'" >&2
+
+  if [[ "$copy_to_clipboard" == "yes" ]]; then
+    if [[ "$out_format" == "gif" ]]; then
+      wl-copy < "$out_file"
+    else
+      echo "Clipboard copy is only supported for images." >&2
+    fi
+  fi
+fi
