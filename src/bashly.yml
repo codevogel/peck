@@ -51,3 +51,6 @@ flags:
       \$PECK_SCREENSHOT_FORMAT
       or \$PECK_RECORDING_FORMAT.
       Accepts png|ppm|jpeg
+  - long: --stop
+    short: -s
+    help: Stop recording (Kills wf-record process).

@@ -14,6 +14,13 @@ root_command() {
   # src/root_command.sh
   # shellcheck disable=SC2154,SC2034
 
+  if [[ "${args[--stop]}" == "1" ]]; then
+    echo "STOPPING"
+    pkill -INT -x wf-recorder
+    notify-send "Peck" "Recording stopped $DBUS_SESSION_BUS_ADDRESS"
+    exit 0
+  fi
+
   # --- Mode ----------------------------------------------------
 
   if [[ "${args[--record]}" == "1" ]]; then
@@ -197,6 +204,11 @@ peck_usage() {
     # :flag.usage
     printf "  %s\n" "--format, -f FILE_FORMAT"
     printf "    Override the output format set by \$PECK_SCREENSHOT_FORMAT or\n    \$PECK_RECORDING_FORMAT. Accepts png|ppm|jpeg\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--stop, -s"
+    printf "    Stop recording (Kills wf-record process).\n"
     echo
 
     # :command.usage_fixed_flags
@@ -389,6 +401,14 @@ parse_requirements() {
           printf "%s\n" "--format requires an argument: --format, -f FILE_FORMAT" >&2
           exit 1
         fi
+        ;;
+
+      # :flag.case
+      --stop | -s)
+
+        # :flag.case_no_arg
+        args['--stop']=1
+        shift
         ;;
 
       -?*)

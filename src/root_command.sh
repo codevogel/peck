@@ -1,5 +1,12 @@
 # shellcheck disable=SC2154,SC2034
 
+if [[ "${args[--stop]}" == "1" ]]; then
+  echo "STOPPING"
+  pkill -INT -x wf-recorder
+  notify-send "Peck" "Recording stopped $DBUS_SESSION_BUS_ADDRESS"
+  exit 0
+fi
+
 # --- Mode ----------------------------------------------------
 
 if [[ "${args[--record]}" == "1" ]]; then
