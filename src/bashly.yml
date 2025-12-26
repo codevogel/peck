@@ -28,6 +28,16 @@ environment_variables:
       Output to convert the recording to.
       Will always record to mp4 first, and then
       use ffmpeg to convert to the desired format.
+  - name: peck_silence_notifications
+    default: "false"
+    help:
+      Determines whether peck will send a notification
+      using libnotify.
+  - name: peck_silence_start_recording
+    default: "false"
+    help:
+      Determines whether peck will send a notification
+      when recording has started.
 
 args:
   - name: filepath
@@ -50,7 +60,13 @@ flags:
       Override the output format set by
       \$PECK_SCREENSHOT_FORMAT
       or \$PECK_RECORDING_FORMAT.
-      Accepts png|ppm|jpeg
-  - long: --stop
-    short: -s
-    help: Stop recording (Kills wf-record process).
+      Accepts png|ppm|jpeg and mp4|gif .
+      Other ffmpeg formats that do not need
+      filters may be supported.
+  - long: --filter
+    short: -F
+    arg: video_filter
+    help:
+      Supply custom filter format to ffmpeg
+      used for conversion of mp4 to the desired
+      format set with --format
