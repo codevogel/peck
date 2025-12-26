@@ -14,183 +14,130 @@ root_command() {
   # src/root_command.sh
   # shellcheck disable=SC2154,SC2034
 
+  # Ensure dependencies are installed, otherwise quit.
+  dependency_check
+
+  # If a recording is already in progress (indicated by the state file), stop it and exit
   if [[ -e /tmp/peck/recording ]]; then
     pkill -INT -x wf-recorder
     rm /tmp/peck/recording
     exit 0
   fi
 
-  # Clean old tmp files
+  # Cleanup old temp files
   rm -rf /tmp/peck/out
 
-  # Determine whether we are in record or screenshot mode
-  if [[ "${args[--record]}" == "1" ]]; then
-    mode="record"
-  else
-    mode="screenshot"
+  # Determine mode: screenshot or record
+  mode=$([[ "${args[--record]}" == "1" ]] && echo "record" || echo "screenshot")
+  # Determine save type: temporary (discard after use) or permanent (keep in output directory)
+  mode_save=$([[ "${args[--temp]}" == "1" ]] && echo "temporary" || echo "permanent")
+  # Determine if the final file should also be copied to the clipboard
+  copy_to_clipboard=$([[ "${args[--clipboard]}" == "1" ]] && echo "true" || echo "false")
+
+  # Validate temp mode: cannot provide a filepath when saving temporarily
+  if [[ "$mode_save" == "temporary" && -n "${args[filepath]}" ]]; then
+    notify_user "Invalid usage: --temp flag cannot be used when providing a filepath."
+    exit 1
   fi
 
-  # Determine whether we will keep the output file in tmp or move it to a permanent location
-  if [[ "${args[--temp]}" == "1" ]]; then
-    if [[ -n "${args[filepath]}" ]]; then
-      notify_user "Invalid usage: --temp flag cannot be used when providing a filepath."
-  	  exit 1
-    fi
-    mode_save="temporary"
-  else
-    mode_save="permanent"
-  fi
-
-  # Clipboard
-  if [[ "${args[--clipboard]}" == "1" ]]; then
-    copy_to_clipboard="true"
-  else
-    copy_to_clipboard="false"
-  fi
-
-  # Format
-
+  # Determine Format
   arg_format="${args[--format]}"
-
   if [[ -n "$arg_format" ]]; then
+    # If format was provided, use that
     out_format="$arg_format"
-  elif [[ "$mode" == "record" ]]; then
-    out_format="$PECK_RECORDING_FORMAT"
   else
-    out_format="$PECK_SCREENSHOT_FORMAT"
+    # Else get the default from the env variables
+    out_format=$([[ "$mode" == "record" ]] && echo "$PECK_RECORDING_FORMAT" || echo "$PECK_SCREENSHOT_FORMAT")
   fi
 
-  # Path
+  # Generate the output filepath
 
   filepath="${args[filepath]}"
   timestamp="$(date +%Y-%m-%d_%H-%M-%S)"
-
   if [[ -n "$filepath" ]]; then
-    # Check if filepath ends with a slash
-    if [[ "$filepath" == */ ]]; then
-      notify_user "Invalid filepath: '$filepath' ends with a '/'. Please provide a filename, not a directory."
-      exit 1
-    fi
+      # Ensure filepath doesn't end with a slash
+      [[ "$filepath" == */ ]] && { notify_user "Invalid filepath: ends with /"; exit 1; }
 
-    # Extract filename
-    filename="${filepath##*/}"
+      filename="$(basename "$filepath")"
+      out_dir="$(dirname "$filepath")"
 
-    # Determine output directory
-    if [[ "$filepath" == */* ]]; then
-      out_dir="${filepath%/*}"
-      [[ -z "$out_dir" ]] && out_dir="/"
-    else
-      out_dir="."
-    fi
+      # If dirname returns ".", it's already the current directory
   else
-    # No filepath supplied → generate filename
-    filename="peck-$timestamp"
-    if [[ "$mode" == "record" ]]; then
-      out_dir="$PECK_RECORDING_DIR"
-    else
-      out_dir="$PECK_SCREENSHOT_DIR"
-    fi
+      # Auto-generate filename and output directory
+      filename="peck-$timestamp"
+      out_dir=$([[ "$mode" == "record" ]] && echo "$PECK_RECORDING_DIR" || echo "$PECK_SCREENSHOT_DIR")
   fi
 
-  # Normalize filename extension
+  # Normalize the filename (prevent .png.png)
+  filename="${filename%."$out_format"}"
 
-  if [[ "$filename" == *."$out_format" ]]; then
-    filename="${filename%."$out_format"}"
-  fi
-
-  # Temp file
-
+  # Create the temp directory
   tmp_dir="/tmp/peck/out"
   mkdir -p "$tmp_dir"
-
   tmp_file="$tmp_dir/$filename.$out_format"
-  out_file="$tmp_file"
 
-  # Screenshot
+  # Select the recording region, exit if cancaelled
+  region=$(slurp) || { notify_user "Selection cancelled, not capturing."; exit 0; }
 
+  # Capture
   if [[ "$mode" == "screenshot" ]]; then
-    grim -t "$out_format" -g "$(slurp)" "$tmp_file"
-
-    if [[ "$mode_save" == "permanent" ]]; then
-      mkdir -p "$out_dir"
-      out_file="$out_dir/$filename.$out_format"
-      mv "$tmp_file" "$out_file"
-    fi
-    notification_message="Screenshot captured ($out_file)"
-
-    if [[ "$copy_to_clipboard" == "true" ]]; then
-      wl-copy < "$out_file"
-      notification_message+=" and copied to the clipboard."
-    fi
-
-    notify_user "$notification_message"
-
-    exit 0
-  fi
-
-  # Screen Recording
-
-  if [[ "$mode" == "record" ]]; then
+    grim -t "$out_format" -g "$region" "$tmp_file"
+  else
+    # Create a filepath for the mp4
     tmp_mp4="$tmp_dir/$filename.mp4"
-    out_file="$tmp_mp4"
-
-    # Ask slurp for a region if needed
-    region="$(slurp 2>/dev/null)"
-    if [[ -z "$region" ]]; then
-      notify_user "No region selected. Exiting."
-      exit 1
-    fi
-
-    # Touch a temp file so the next peck call knows to stop recording
+    # Mark as currently recording so we can stop by calling peck again
     touch /tmp/peck/recording
     notify_user "Recording has started..." "$PECK_SILENCE_START_RECORDING"
-    # Separate echo for when running from the terminal
-    echo "Press CTRL+C to stop..." >&2
-
+    echo "Press CTRL+C to stop recording." >&2
     wf-recorder -g "$region" -f "$tmp_mp4" &>/dev/null
+    echo "" >&2
+    # Remove the recording state file in case we quit from the terminal rather than calling peck again
     rm -f /tmp/peck/recording
 
+    # Handle Conversion/Filtering
     video_filter="${args[--filter]}"
-    # Convert to desired output format if different from mp4
-    if [[ "$out_format" != "mp4" ]]; then
-      final_file="$tmp_dir/$filename.$out_format"
 
-      # Determine which filter to use
-      if [[ -n "$video_filter" ]]; then
+    if [[ "$out_format" != "mp4" || -n "$video_filter" ]]; then
         vf="$video_filter"
-      elif [[ "$out_format" == "gif" ]]; then
-        vf="fps=20,scale=iw:-1:flags=lanczos"
-      else
-        vf=""
-      fi
 
-      # Run ffmpeg with or without a video filter
-      if [[ -n "$vf" ]]; then
-        ffmpeg -y -i "$tmp_mp4" -vf "$vf" "$final_file" &>/dev/null
-      else
-        ffmpeg -y -i "$tmp_mp4" "$final_file" &>/dev/null
-      fi
+        if [[ -z "$vf" && "$out_format" == "gif" ]]; then
+            vf="fps=20,scale=iw:-1:flags=lanczos"
+        fi
 
-      rm -f "$tmp_mp4"
-      out_file="$final_file"
+        if [[ -n "$vf" ]]; then
+            ffmpeg -y -i "$tmp_mp4" -vf "$vf" "$tmp_file" &>/dev/null
+        else
+            ffmpeg -y -i "$tmp_mp4" "$tmp_file" &>/dev/null
+        fi
+
+        # Remove the temporary file after conversion
+        rm -f "$tmp_mp4"
+    else
+      tmp_file="$tmp_mp4"
     fi
-
-    if [[ "$mode_save" == "permanent" ]]; then
-      mkdir -p "$out_dir"
-      final_out="$out_dir/$filename.$out_format"
-      mv "$out_file" "$final_out"
-      out_file="$final_out"
-    fi
-
-    notification_message="Recording captured ($out_file)"
-
-    if [[ "$copy_to_clipboard" == "true" ]]; then
-      wl-copy --type text/uri-list "file://$out_file"
-      notification_message+=" and copied to the clipboard."
-    fi
-
-    notify_user "$notification_message"
   fi
+
+  final_path="$tmp_file"
+
+  # If we want to store the file permanently, move it out of the tmp dir
+  if [[ "$mode_save" == "permanent" ]]; then
+    mkdir -p "$out_dir"
+    final_path="$out_dir/$filename.$out_format"
+    mv "$tmp_file" "$final_path"
+  fi
+
+  # Notify the user and copy to clipboard if requested
+  notification_message="Captured ($final_path)"
+  if [[ "$copy_to_clipboard" == "true" ]]; then
+    if [[ "$mode" == "screenshot" ]]; then
+      wl-copy < "$final_path"
+    else
+      wl-copy --type text/uri-list "file://$final_path"
+    fi
+    notification_message+=" and copied to clipboard."
+  fi
+
+  notify_user "$notification_message"
 
 }
 
@@ -361,6 +308,17 @@ inspect_args() {
 }
 
 # :command.user_lib
+# src/lib/dependency_check.sh
+dependency_check() {
+  for cmd in grim slurp wf-recorder ffmpeg wl-copy; do
+    command -v "$cmd" >/dev/null 2>&1 || {
+
+        echo "Error: $cmd not found. Please install: grim, slurp, wf-recorder, ffmpeg, and wl-copy." >&2
+        exit 1
+    }
+  done
+}
+
 # src/lib/notify_user.sh
 notify_user() {
   local message="$1"
