@@ -1,5 +1,6 @@
 name: peck
-help: Screenshot and screen recorder tool for Wayland.
+help: |
+  Screenshot and screen recorder tool for Wayland.
 version: 0.1.0
 
 environment_variables:
@@ -60,9 +61,8 @@ flags:
       Override the output format set by
       \$PECK_SCREENSHOT_FORMAT
       or \$PECK_RECORDING_FORMAT.
-      Accepts png|ppm|jpeg and mp4|gif .
-      Other ffmpeg formats that do not need
-      filters may be supported.
+      Accepts png|ppm|jpeg and mp4|gif by default.
+      Other video formats may need --filter
   - long: --filter
     short: -F
     arg: video_filter
@@ -70,3 +70,22 @@ flags:
       Supply custom filter format to ffmpeg
       used for conversion of mp4 to the desired
       format set with --format
+
+examples: |
+  peck
+    Capture a screenshot.
+  peck [foo|bar/baz]
+    Capture a screenshot.
+    Store to [./foo.png|./bar/baz.png]
+  peck --record
+    Capture a recording.
+    Recording can be stopped with CTRL-C or by
+    running peck again.
+  peck --record --format=gif
+    Capture a recording, then convert it to gif.
+  peck --record --temp --clipboard
+    Capture a screenshot, store it temporarily,
+    and copy it to the clipboard.
+  peck --record --format webm --filter "fps=30,scale=1280:-1:flags=lanczos"
+    Capture a recording, then convert it to webm,
+    using an ffmpeg filter.

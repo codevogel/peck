@@ -159,7 +159,12 @@ version_command() {
 
 # :command.usage
 peck_usage() {
-  printf "peck - Screenshot and screen recorder tool for Wayland.\n\n"
+  if [[ -n $long_usage ]]; then
+    printf "peck\n\n"
+    printf "  Screenshot and screen recorder tool for Wayland.\n\n"
+  else
+    printf "peck - Screenshot and screen recorder tool for Wayland.\n\n"
+  fi
 
   printf "%s\n" "Usage:"
   printf "  peck [FILEPATH] [OPTIONS]\n"
@@ -189,7 +194,7 @@ peck_usage() {
 
     # :flag.usage
     printf "  %s\n" "--format, -f FILE_FORMAT"
-    printf "    Override the output format set by \$PECK_SCREENSHOT_FORMAT or\n    \$PECK_RECORDING_FORMAT. Accepts png|ppm|jpeg and mp4|gif . Other ffmpeg\n    formats that do not need filters may be supported.\n"
+    printf "    Override the output format set by \$PECK_SCREENSHOT_FORMAT or\n    \$PECK_RECORDING_FORMAT. Accepts png|ppm|jpeg and mp4|gif by default. Other\n    video formats may need --filter\n"
     echo
 
     # :flag.usage
@@ -250,6 +255,11 @@ peck_usage() {
     printf "  %s\n" "PECK_SILENCE_START_RECORDING"
     printf "    Determines whether peck will send a notification when recording has started.\n"
     printf "    %s\n" "Default: false"
+    echo
+
+    # :command.usage_examples
+    printf "%s\n" "Examples:"
+    printf "  peck\n    Capture a screenshot.\n  peck [foo|bar/baz]\n    Capture a screenshot.\n    Store to [./foo.png|./bar/baz.png]\n  peck --record\n    Capture a recording.\n    Recording can be stopped with CTRL-C or by\n    running peck again.\n  peck --record --format=gif\n    Capture a recording, then convert it to gif.\n  peck --record --temp --clipboard\n    Capture a screenshot, store it temporarily,\n    and copy it to the clipboard.\n  peck --record --format webm --filter \"fps=30,scale=1280:-1:flags=lanczos\"\n    Capture a recording, then convert it to webm,\n    using an ffmpeg filter.\n"
     echo
 
   fi
