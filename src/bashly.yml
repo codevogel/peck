@@ -63,6 +63,10 @@ flags:
       or \$PECK_RECORDING_FORMAT.
       Accepts png|ppm|jpeg and mp4|gif by default.
       Other video formats may need --filter
+  - long: --freeze
+    short: -z
+    help: Freezes the screen while capturing a screenshot.
+    conflicts: [ --record ]
   - long: --filter
     short: -F
     arg: video_filter

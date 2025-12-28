@@ -30,6 +30,8 @@ mode=$([[ "${args[--record]}" == "1" ]] && echo "record" || echo "screenshot")
 mode_save=$([[ "${args[--temp]}" == "1" ]] && echo "temporary" || echo "permanent")
 # Determine if final file should be copied to clipboard
 copy_to_clipboard=$([[ "${args[--clipboard]}" == "1" ]] && echo "true" || echo "false")
+# Determine whether to freeze the screen while capturing screenshot
+freeze_mode=$([[ "${args[--freeze]}" == "1" ]] && echo "true" || echo "false")
 
 # Validate temp mode
 if [[ "$mode_save" == "temporary" && -n "${args[filepath]}" ]]; then
@@ -64,13 +66,34 @@ tmp_dir="/tmp/peck/out"
 mkdir -p "$tmp_dir"
 tmp_file="$tmp_dir/$filename.$out_format"
 
-# Select region
-region=$(slurp) || { notify_user "Selection cancelled, not capturing."; exit 0; }
+
 
 # Capture
 if [[ "$mode" == "screenshot" ]]; then
-    grim -t "$out_format" -g "$region" "$tmp_file"
+    if [[ "$freeze_mode" == "true" ]]; then
+        # Freeze screen and take screenshot
+        # Freeze screen
+        wayfreeze & PID=$!
+        sleep .1
+
+        # Try to get region selection
+        region=$(slurp) || {
+            kill $PID
+            notify_user "Selection cancelled, not capturing."
+            exit 0
+        }
+
+        # Take screenshot
+        grim -t "$out_format" -g "$region" "$tmp_file"
+        kill $PID
+    else
+        # Normal selection without freeze
+        region=$(slurp) || { notify_user "Selection cancelled, not capturing."; exit 0; }
+        grim -t "$out_format" -g "$region" "$tmp_file"
+    fi
 else
+    # Select region
+    region=$(slurp) || { notify_user "Selection cancelled, not capturing."; exit 0; }
     tmp_mp4="$tmp_dir/$filename.mp4"
 
     # Enable job control

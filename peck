@@ -44,6 +44,8 @@ root_command() {
   mode_save=$([[ "${args[--temp]}" == "1" ]] && echo "temporary" || echo "permanent")
   # Determine if final file should be copied to clipboard
   copy_to_clipboard=$([[ "${args[--clipboard]}" == "1" ]] && echo "true" || echo "false")
+  # Determine whether to freeze the screen while capturing screenshot
+  freeze_mode=$([[ "${args[--freeze]}" == "1" ]] && echo "true" || echo "false")
 
   # Validate temp mode
   if [[ "$mode_save" == "temporary" && -n "${args[filepath]}" ]]; then
@@ -78,13 +80,32 @@ root_command() {
   mkdir -p "$tmp_dir"
   tmp_file="$tmp_dir/$filename.$out_format"
 
-  # Select region
-  region=$(slurp) || { notify_user "Selection cancelled, not capturing."; exit 0; }
-
   # Capture
   if [[ "$mode" == "screenshot" ]]; then
-      grim -t "$out_format" -g "$region" "$tmp_file"
+      if [[ "$freeze_mode" == "true" ]]; then
+          # Freeze screen and take screenshot
+          # Freeze screen
+          wayfreeze & PID=$!
+          sleep .1
+
+          # Try to get region selection
+          region=$(slurp) || {
+              kill $PID
+              notify_user "Selection cancelled, not capturing."
+              exit 0
+          }
+
+          # Take screenshot
+          grim -t "$out_format" -g "$region" "$tmp_file"
+          kill $PID
+      else
+          # Normal selection without freeze
+          region=$(slurp) || { notify_user "Selection cancelled, not capturing."; exit 0; }
+          grim -t "$out_format" -g "$region" "$tmp_file"
+      fi
   else
+      # Select region
+      region=$(slurp) || { notify_user "Selection cancelled, not capturing."; exit 0; }
       tmp_mp4="$tmp_dir/$filename.mp4"
 
       # Enable job control
@@ -195,6 +216,12 @@ peck_usage() {
     # :flag.usage
     printf "  %s\n" "--format, -f FILE_FORMAT"
     printf "    Override the output format set by \$PECK_SCREENSHOT_FORMAT or\n    \$PECK_RECORDING_FORMAT. Accepts png|ppm|jpeg and mp4|gif by default. Other\n    video formats may need --filter\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--freeze, -z"
+    printf "    Freezes the screen while capturing a screenshot.\n"
+    printf "    %s\n" "Conflicts: --record"
     echo
 
     # :flag.usage
@@ -436,6 +463,19 @@ parse_requirements() {
           printf "%s\n" "--format requires an argument: --format, -f FILE_FORMAT" >&2
           exit 1
         fi
+        ;;
+
+      # :flag.case
+      --freeze | -z)
+        # :flag.conflicts
+        if [[ -n "${args['--record']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--record" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--freeze']=1
+        shift
         ;;
 
       # :flag.case
