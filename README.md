@@ -42,6 +42,8 @@ Then install these external dependencies:
    recordings to a desired format)
 5. [wl-clipboard](https://github.com/bugaevc/wl-clipboard) (for copying the
    output to the clipboard)
+6. [wayfreeze](https://github.com/Jappie3/wayfreeze) (optional, required if you
+   want to use `--freeze`)
 
 Below are some example instructions for Ubuntu, Arch, and NixOS.
 
@@ -52,11 +54,18 @@ sudo apt update
 sudo apt install -y grim slurp wf-recorder ffmpeg wl-clipboard
 ```
 
+`wayfreeze` is not available through `apt`, so must be installed from source.
+Though `wayfreeze` is only needed for the `--freeze` argument, so can be omitted
+if you can live without freezing the screen before taking a screenshot.
+
 #### Arch
 
 ```bash
 sudo pacman -Syu grim slurp wf-recorder ffmpeg wl-clipboard
 ```
+
+There is an unofficial `wayfreeze` package
+[on the AUR](https://aur.archlinux.org/packages/wayfreeze-git).
 
 #### NixOS
 
@@ -68,6 +77,7 @@ home.packages = with pkgs; [
   wf-recorder
   ffmpeg
   wl-clipboard
+  wayfreeze
 ];
 ```
 
@@ -103,11 +113,11 @@ releases page, and installs the dependenceis using home manager:
 let
   peck = pkgs.stdenv.mkDerivation {
     pname = "peck";
-    version = "0.1.0";
+    version = "0.1.1";
 
     src = pkgs.fetchurl {
-      url = "https://github.com/codevogel/peck/releases/download/v0.1.0/peck";
-      sha256 = "47bfd14c390c6f09e521c864efbd2d7ed608164240d07c6ecf48c2b7677dbabc";
+      url = "https://github.com/codevogel/peck/releases/download/v0.1.1/peck";
+      sha256 = "b2eabeae7b8faecbff9d51acf8d3b66a157584013e6b47ab780f7bb9d90c3b66";
     };
 
     unpackPhase = ''true'';
@@ -129,6 +139,7 @@ in
     wf-recorder
     ffmpeg
     wl-clipboard
+    wayfreeze
   ];
 }
 ```
@@ -139,9 +150,9 @@ Add `peck` to your window manager using sensible keybinds. For example, in
 Hyprland:
 
 ```hypr
-bind=$mainMod SHIFT, S, exec, ~/work/peck/peck --clipboard --temp
-bind=$mainMod SHIFT, R, exec, ~/work/peck/peck --record --clipboard --temp
-bind=$mainMod SHIFT, G, exec, ~/work/peck/peck --record --clipboard --temp --format=gif
+bind=$mainMod SHIFT, S, exec, peck --clipboard --temp --freeze
+bind=$mainMod SHIFT, R, exec, peck --record --clipboard --temp
+bind=$mainMod SHIFT, G, exec, peck --record --clipboard --temp --format=gif
 ```
 
 This would set `SUPER+SHIFT+[S|R|G]` to capture a screenshot, recording, or gif
@@ -216,6 +227,7 @@ Record and convert using a custom ffmpeg filter.
 | `--clipboard`             | `-c`  | Copy the output file to the clipboard.                                                                                                                               |
 | `--record`                | `-r`  | Record instead of screenshot.                                                                                                                                        |
 | `--temp`                  | `-t`  | Store the file in `/tmp/peck/out`. This is cleared upon each invocation of peck, so captures don't clog up your filesystem.                                          |
+| `--freeze`                | `-z`  | Freeze the screen before taking a screenshot. Conflicts with `--record`.                                                                                             |
 | `--format <file_format>`  | `-f`  | Override output format (`png, ppm, jpeg`for screenshots, `mp4, gif` for recordings). Also allows for other recording formats, but these may need `--filter` to work. |
 | `--filter <video_filter>` | `-F`  | Custom ffmpeg filter for video conversion.                                                                                                                           |
 
