@@ -176,7 +176,8 @@ Below are some examples that show how to use `peck`.
 peck
 ```
 
-Captures a screenshot and saves it to the default screenshot directory.
+Captures a screenshot by region and saves it to the default screenshot directory
+(set with `$PECK_SCREENSHOT_DIR`, which defaults to `$HOME/Pictures/`).
 
 ### Screenshot with Custom Path
 
@@ -185,7 +186,8 @@ peck ./foo.png
 peck bar/baz
 ```
 
-Stores the screenshot to the specified path.
+Stores the screenshot to the specified path. (In this example, would store the
+screenshot at `./foo.png` or `./bar/baz.png`)
 
 ### Recording
 
@@ -193,7 +195,12 @@ Stores the screenshot to the specified path.
 peck --record
 ```
 
-Start screen recording. Stop recording with `CTRL-C` or by running `peck` again.
+Starts a screen recording by region, storing the recording in the default
+directory (set with `$PECK_RECORDING_DIR`, which defaults to
+`$HOME/Recordings/`).
+
+Stop recording with `CTRL-C` (when launched from the CLI), or by running `peck`
+again.
 
 ### Recording with Format Conversion
 
@@ -201,7 +208,7 @@ Start screen recording. Stop recording with `CTRL-C` or by running `peck` again.
 peck --record --format=gif
 ```
 
-Record your screen and convert the recording to a GIF.
+Starts a screen recording, and converts the output file to GIF using `ffmpeg`.
 
 ### Temporary Screenshot to Clipboard
 
@@ -209,8 +216,9 @@ Record your screen and convert the recording to a GIF.
 peck --temp --clipboard
 ```
 
-Capture a screenshot, store it temporarily in `/tmp/`, and copy it to the
-clipboard.
+Capture a screenshot, storing the output file in `/tmp/peck/out` (which is
+periodically cleared by `peck` to prevent clogging up the file system), and copy
+the output file to the clipboard.
 
 ### Recording with Custom ffmpeg Filter
 
@@ -218,7 +226,7 @@ clipboard.
 peck --record --format webm --filter "fps=30,scale=1280:-1:flags=lanczos"
 ```
 
-Record and convert using a custom ffmpeg filter.
+Record and convert the file to a `webm` using a custom `ffmpeg` filter.
 
 ## Command-line Options
 
