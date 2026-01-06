@@ -106,22 +106,32 @@ else
     # Remove the PID file in case we stopped recording by CTRL+C rather than rerunning peck
     rm -f "$RECORDER_PID_FILE"
 
+
     # Handle conversion/filtering
     video_filter="${args[--filter]}"
     if [[ "$out_format" != "mp4" || -n "$video_filter" ]]; then
         vf="$video_filter"
-        [[ -z "$vf" && "$out_format" == "gif" ]] && vf="fps=20,scale=iw:-1:flags=lanczos"
 
-        if [[ -n "$vf" ]]; then
-            ffmpeg -y -i "$tmp_mp4" -vf "$vf" "$tmp_file" &>/dev/null
+        # Default GIF conversion if no user filter provided
+        if [[ -z "$vf" && "$out_format" == "gif" ]]; then
+            # Generate temporary palette for high-quality GIF
+            palette="$tmp_dir/$filename-palette.png"
+            ffmpeg -y -i "$tmp_mp4" -vf "fps=20,scale=iw:-1:flags=lanczos,palettegen" "$palette" &>/dev/null
+            ffmpeg -y -i "$tmp_mp4" -i "$palette" -lavfi "fps=20,scale=iw:-1:flags=lanczos [x]; [x][1:v] paletteuse" "$tmp_file" &>/dev/null
+            rm -f "$palette" "$tmp_mp4"
         else
-            ffmpeg -y -i "$tmp_mp4" "$tmp_file" &>/dev/null
+            # Use user-supplied filter or non-GIF conversion
+            if [[ -n "$vf" ]]; then
+                ffmpeg -y -i "$tmp_mp4" -vf "$vf" "$tmp_file" &>/dev/null
+            else
+                ffmpeg -y -i "$tmp_mp4" "$tmp_file" &>/dev/null
+            fi
+            rm -f "$tmp_mp4"
         fi
-
-        rm -f "$tmp_mp4"
     else
         tmp_file="$tmp_mp4"
     fi
+
 fi
 
 final_path="$tmp_file"
