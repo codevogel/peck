@@ -96,25 +96,12 @@ else
     region=$(slurp) || { notify_user "Selection cancelled, not capturing."; exit 0; }
     tmp_mp4="$tmp_dir/$filename.mp4"
 
-    # Enable job control
-    set -m
-
     notify_user "Recording has started..." "$PECK_SILENCE_START_RECORDING"
     echo "Press CTRL+C to stop recording." >&2
-
-    # Trap SIGINT so we can CTRL+C wf-recorder
-    trap "" SIGINT
-
-    # Start wf-recorder and store its PID (in case we stop recording by rerunning peck)
     wf-recorder -g "$region" -f "$tmp_mp4" &>/dev/null &
     recorder_pid=$!
     echo "$recorder_pid" > "$RECORDER_PID_FILE"
-
-    # Restore SIGINT handling for child
-    trap - SIGINT
-
-    # Bring recorder to foreground (so CTRL+C hits only wf-recorder)
-    fg %- >/dev/null
+    wait "$recorder_pid"
 
     # Remove the PID file in case we stopped recording by CTRL+C rather than rerunning peck
     rm -f "$RECORDER_PID_FILE"
