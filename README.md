@@ -113,11 +113,11 @@ releases page, and installs the dependenceis using home manager:
 let
   peck = pkgs.stdenv.mkDerivation {
     pname = "peck";
-    version = "0.1.1";
+    version = "0.1.2";
 
     src = pkgs.fetchurl {
-      url = "https://github.com/codevogel/peck/releases/download/v0.1.1/peck";
-      sha256 = "b2eabeae7b8faecbff9d51acf8d3b66a157584013e6b47ab780f7bb9d90c3b66";
+      url = "https://github.com/codevogel/peck/releases/download/v0.1.2/peck";
+      sha256 = "b595869321085361e1e687d1c6ff308b0d5eccae3ab73a3cfd18e605f2ac82a1";
     };
 
     unpackPhase = ''true'';
