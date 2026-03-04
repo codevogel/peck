@@ -34,7 +34,7 @@ your system.
 
 Then install these external dependencies:
 
-1. [grim](https://github.com/GrimAnticheat/Grim) (for capturing screenshots)
+1. [grim](https://gitlab.freedesktop.org/emersion/grim) (for capturing screenshots)
 2. [slurp](https://github.com/emersion/slurp) (for grabbing the screen region)
 3. [wf-recorder](https://github.com/ammen99/wf-recorder) (for capturing screen
    recordings)
